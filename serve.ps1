@@ -1,0 +1,1 @@
+java -jar .\maelstrom\lib\maelstrom.jar serve
