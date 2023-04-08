@@ -10,15 +10,13 @@ use maelstrom::message::*;
 fn main() -> Result<()> {
     color_eyre::install()?;
 
-    let mut echo_server = EchoServer {
-        id: None,
-        msg_counter_id: 0,
-    };
+    let mut echo_server = EchoServer::new();
 
     loop {
         let line: String = read!("{}\n");
+        //eprintln!("{}", line);
         let msg: Message = serde_json::from_str(&line)?;
-        eprintln!("{}\n{:?}\n", line, msg);
+        //eprintln!("{:?}\n", msg);
         echo_server.handle_message(&msg)?;
     }
 }

@@ -16,6 +16,8 @@ pub enum BodyType {
     InitOk,
     Echo,
     EchoOk,
+    Generate,
+    GenerateOk,
     Error,
 }
 impl Default for BodyType {
@@ -49,6 +51,9 @@ pub struct Body {
     /// Echo: Echo Message
     #[serde(skip_serializing_if = "Option::is_none")]
     pub echo: Option<String>,
+    /// Generate: Generated ID
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

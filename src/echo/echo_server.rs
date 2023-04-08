@@ -4,16 +4,28 @@ use crate::Message;
 use crate::ID;
 use color_eyre::eyre::ContextCompat;
 use color_eyre::Result;
+use rand::Rng;
+
 pub struct EchoServer {
     pub id: Option<ID>,
     pub msg_counter_id: u64,
+    pub rng: rand::rngs::ThreadRng,
 }
 
 impl EchoServer {
+    pub fn new() -> Self {
+        Self {
+            id: None,
+            msg_counter_id: 0,
+            rng: rand::thread_rng(),
+        }
+    }
+
     pub fn handle_message(&mut self, msg: &Message) -> Result<()> {
         let response = match msg.body.body_type {
             BodyType::Init => self.handle_init(msg)?,
             BodyType::Echo => self.handle_echo(msg)?,
+            BodyType::Generate => self.handle_generate(msg)?,
             _ => Message {
                 src: self.id.context("Client hot been initilized!")?,
                 dest: msg.src,
@@ -55,6 +67,21 @@ impl EchoServer {
                 body_type: BodyType::EchoOk,
                 in_reply_to: msg.body.msg_id,
                 echo: msg.body.echo.clone(),
+                ..Default::default()
+            },
+        };
+        response.body.msg_id = inc_and_return(&mut self.msg_counter_id);
+        Ok(response)
+    }
+
+    fn handle_generate(&mut self, msg: &Message) -> Result<Message> {
+        let mut response = Message {
+            src: self.id.context("Not Initlized")?,
+            dest: msg.src,
+            body: Body {
+                body_type: BodyType::GenerateOk,
+                in_reply_to: msg.body.msg_id,
+                id: Some(self.rng.gen::<u128>().to_string()),
                 ..Default::default()
             },
         };
