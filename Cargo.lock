@@ -72,17 +72,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dist"
-version = "0.1.0"
-dependencies = [
- "color-eyre",
- "serde",
- "serde_json",
- "text_io",
- "thiserror",
-]
-
-[[package]]
 name = "eyre"
 version = "0.6.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -121,6 +110,17 @@ name = "libc"
 version = "0.2.141"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3304a64d199bb964be99741b7a14d26972741915b3649639149b2479bb46f4b5"
+
+[[package]]
+name = "maelstrom_echo"
+version = "0.1.0"
+dependencies = [
+ "color-eyre",
+ "serde",
+ "serde_json",
+ "text_io",
+ "thiserror",
+]
 
 [[package]]
 name = "memchr"

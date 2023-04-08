@@ -12,8 +12,8 @@ pub struct EchoServer {
 impl EchoServer {
     pub fn handle_message(&mut self, msg: &Message) -> Result<()> {
         let response = match msg.body.body_type {
-            BodyType::Init => self.handle_init(&msg)?,
-            BodyType::Echo => self.handle_echo(&msg)?,
+            BodyType::Init => self.handle_init(msg)?,
+            BodyType::Echo => self.handle_echo(msg)?,
             _ => Message {
                 src: self.id.context("Client hot been initilized!")?,
                 dest: msg.src,
