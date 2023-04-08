@@ -10,6 +10,8 @@ pub struct EchoServer {
     pub id: Option<ID>,
     pub msg_counter_id: u64,
     pub rng: rand::rngs::ThreadRng,
+    // Part of Broadcast workload
+    pub msg_state: Vec<u32>,
 }
 
 impl EchoServer {
@@ -18,79 +20,133 @@ impl EchoServer {
             id: None,
             msg_counter_id: 0,
             rng: rand::thread_rng(),
+            msg_state: vec![],
         }
     }
 
     pub fn handle_message(&mut self, msg: &Message) -> Result<()> {
-        let response = match msg.body.body_type {
+        let mut response = match msg.body.body_type {
             BodyType::Init => self.handle_init(msg)?,
             BodyType::Echo => self.handle_echo(msg)?,
             BodyType::Generate => self.handle_generate(msg)?,
+            BodyType::Read => self.handle_read(msg)?,
+            BodyType::Broadcast => self.handle_broadcast(msg)?,
+            BodyType::Topology => self.handle_topology(msg)?,
             _ => Message {
                 src: self.id.context("Client hot been initilized!")?,
                 dest: msg.src,
                 body: Body {
                     body_type: BodyType::Error,
-                    msg_id: inc_and_return(&mut self.msg_counter_id),
-                    in_reply_to: msg.body.msg_id,
+                    msg_id: Self::inc_and_return(&mut self.msg_counter_id),
                     code: Some(10),
                     text: Some("".to_string()),
                     ..Default::default()
                 },
             },
         };
+        response.body.in_reply_to = msg.body.msg_id;
         println!("{}", serde_json::to_string(&response)?);
         Ok(())
     }
 
+    fn inc_and_respond(&mut self, mut response: Message) -> Message {
+        Self::inc_and_return(&mut self.msg_counter_id);
+        response.body.msg_id =
+            Self::inc_and_return(&mut self.msg_counter_id);
+        response
+    }
+
+    fn inc_and_return(int: &mut u64) -> Option<u64> {
+        *int += 1;
+        Some(*int)
+    }
+
+    fn create_response(
+        &self,
+        msg: &Message,
+        body: Body,
+    ) -> Result<Message> {
+        Ok(Message {
+            src: self.id.context("Not Initlized")?,
+            dest: msg.src,
+            body,
+        })
+    }
+
     fn handle_init(&mut self, msg: &Message) -> Result<Message> {
         self.id = Some(msg.dest);
-
-        let mut response = Message {
-            src: msg.dest, // Use msg.dest here just to avoid unwraping self.id
-            dest: msg.src,
-            body: Body {
+        let response = self.create_response(
+            msg,
+            Body {
                 body_type: BodyType::InitOk,
-                in_reply_to: msg.body.msg_id,
                 ..Default::default()
             },
-        };
-        response.body.msg_id = inc_and_return(&mut self.msg_counter_id);
-        Ok(response)
+        )?;
+
+        Ok(self.inc_and_respond(response))
     }
 
     fn handle_echo(&mut self, msg: &Message) -> Result<Message> {
-        let mut response = Message {
-            src: self.id.context("Not Initlized")?,
-            dest: msg.src,
-            body: Body {
+        let response = self.create_response(
+            msg,
+            Body {
                 body_type: BodyType::EchoOk,
-                in_reply_to: msg.body.msg_id,
                 echo: msg.body.echo.clone(),
                 ..Default::default()
             },
-        };
-        response.body.msg_id = inc_and_return(&mut self.msg_counter_id);
-        Ok(response)
+        )?;
+        Ok(self.inc_and_respond(response))
     }
 
     fn handle_generate(&mut self, msg: &Message) -> Result<Message> {
-        let mut response = Message {
-            src: self.id.context("Not Initlized")?,
-            dest: msg.src,
-            body: Body {
+        let random_id = self.rng.gen::<u128>().to_string();
+
+        let response = self.create_response(
+            msg,
+            Body {
                 body_type: BodyType::GenerateOk,
-                in_reply_to: msg.body.msg_id,
-                id: Some(self.rng.gen::<u128>().to_string()),
+                id: Some(random_id),
                 ..Default::default()
             },
-        };
-        response.body.msg_id = inc_and_return(&mut self.msg_counter_id);
-        Ok(response)
+        )?;
+        Ok(self.inc_and_respond(response))
     }
-}
 
-fn inc_and_return(int: &mut u64) -> Option<u64> {
-    *int += 1;
-    Some(*int)
+    fn handle_read(&mut self, msg: &Message) -> Result<Message> {
+        let response = self.create_response(
+            msg,
+            Body {
+                body_type: BodyType::ReadOk,
+                messages: Some(self.msg_state.clone()),
+                ..Default::default()
+            },
+        )?;
+        Ok(self.inc_and_respond(response))
+    }
+    fn handle_broadcast(&mut self, msg: &Message) -> Result<Message> {
+        self.msg_state.push(
+            msg.body
+                .message
+                .context("Broadcast didn't supply Message")?,
+        );
+
+        let response = self.create_response(
+            msg,
+            Body {
+                body_type: BodyType::BroadcastOk,
+                ..Default::default()
+            },
+        )?;
+        Ok(self.inc_and_respond(response))
+    }
+    fn handle_topology(&mut self, msg: &Message) -> Result<Message> {
+        let response = self.create_response(
+            msg,
+            Body {
+                body_type: BodyType::TopologyOk,
+                ..Default::default()
+            },
+        )?;
+        Ok(self.inc_and_respond(response))
+    }
 }

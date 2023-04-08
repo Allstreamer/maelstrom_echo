@@ -18,6 +18,12 @@ pub enum BodyType {
     EchoOk,
     Generate,
     GenerateOk,
+    Broadcast,
+    BroadcastOk,
+    Read,
+    ReadOk,
+    Topology,
+    TopologyOk,
     Error,
 }
 impl Default for BodyType {
@@ -54,6 +60,12 @@ pub struct Body {
     /// Generate: Generated ID
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
+    /// Brodcast: Value that is to be distributed
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub message: Option<u32>,
+    /// Brodcast: Values that were captured by a broadcast
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub messages: Option<Vec<u32>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
