@@ -1,3 +1,6 @@
+// This file is part of Maelstrom Echo which is released under GNU GPL v2.0.
+// See file LICENSE.
+
 use color_eyre::Result;
 use text_io::read;
 
