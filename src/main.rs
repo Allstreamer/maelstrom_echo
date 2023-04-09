@@ -14,9 +14,9 @@ fn main() -> Result<()> {
 
     loop {
         let line: String = read!("{}\n");
-        //eprintln!("{}", line);
+        // eprintln!("{}", line);
         let msg: Message = serde_json::from_str(&line)?;
-        //eprintln!("{:?}\n", msg);
+        // eprintln!("{:?}\n", msg);
         echo_server.handle_message(&msg)?;
     }
 }

@@ -12,6 +12,7 @@ pub struct EchoServer {
     pub rng: rand::rngs::ThreadRng,
     // Part of Broadcast workload
     pub msg_state: Vec<u32>,
+    pub node_ids: Vec<ID>,
 }
 
 impl EchoServer {
@@ -21,6 +22,7 @@ impl EchoServer {
             msg_counter_id: 0,
             rng: rand::thread_rng(),
             msg_state: vec![],
+            node_ids: vec![],
         }
     }
 
@@ -31,6 +33,7 @@ impl EchoServer {
             BodyType::Generate => self.handle_generate(msg)?,
             BodyType::Read => self.handle_read(msg)?,
             BodyType::Broadcast => self.handle_broadcast(msg)?,
+            BodyType::BroadcastOk => return Ok(()),
             BodyType::Topology => self.handle_topology(msg)?,
             _ => Message {
                 src: self.id.context("Client hot been initilized!")?,
@@ -38,7 +41,7 @@ impl EchoServer {
                 body: Body {
                     body_type: BodyType::Error,
                     msg_id: Self::inc_and_return(&mut self.msg_counter_id),
-                    code: Some(10),
+                    code: Some(13),
                     text: Some("".to_string()),
                     ..Default::default()
                 },
@@ -75,6 +78,16 @@ impl EchoServer {
 
     fn handle_init(&mut self, msg: &Message) -> Result<Message> {
         self.id = Some(msg.dest);
+        self.node_ids = msg
+            .body
+            .node_ids
+            .clone()
+            .context("I")?
+            .iter()
+            .filter(|x| **x != msg.dest)
+            .map(|x| x.to_owned())
+            .collect::<Vec<ID>>();
+        // eprintln!("{:?},\n{:?}", self.id, self.node_ids);
         let response = self.create_response(
             msg,
             Body {
@@ -129,6 +142,24 @@ impl EchoServer {
                 .message
                 .context("Broadcast didn't supply Message")?,
         );
+
+        // Only Distribute when message comes from client
+        if let ID::Client(_v) = msg.src {
+            for node in &self.node_ids {
+                println!(
+                    "{}",
+                    serde_json::to_string(&Message {
+                        src: self.id.context("Not initlized")?,
+                        dest: *node,
+                        body: Body {
+                            body_type: BodyType::Broadcast,
+                            message: msg.body.message,
+                            ..Default::default()
+                        }
+                    })?
+                );
+            }
+        }
 
         let response = self.create_response(
             msg,
